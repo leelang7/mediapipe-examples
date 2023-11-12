@@ -1,6 +1,7 @@
 import cv2
 import mediapipe as mp
-import timeit
+import time
+import numpy as np
 
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
@@ -48,9 +49,13 @@ with mp_pose.Pose(
         results.pose_world_landmarks, mp_pose.POSE_CONNECTIONS)
 
 url = 'rtsp://192.168.50.159/video1' # 카메라 주소
-
+video_path = 'C:\\Users\\leesc\\Downloads\\사람동작 영상\\비디오\\video_action_6\\data\\delivery_final_3D\\video\\6-1\\6-1_001-C01.mp4'
+image_path = 'C:\\Users\\leesc\\PycharmProjects\\Gesture-control\\a.jpg'
 # For webcam input:
-cap = cv2.VideoCapture(0) # 0 : 내장카메라, url : 카메라 주소
+cap = cv2.VideoCapture(video_path) # 0 : 내장카메라, url : 카메라 주소
+pTime = 0
+cnt = 0 # 카운트
+
 with mp_pose.Pose(
     min_detection_confidence=0.5,
     min_tracking_confidence=0.5) as pose:
@@ -69,7 +74,6 @@ with mp_pose.Pose(
     results = pose.process(image)
 
     keypoints = []
-    start = timeit.default_timer()
     if results.pose_landmarks:
         for data_point in results.pose_landmarks.landmark:
             keypoints.append({
@@ -81,16 +85,21 @@ with mp_pose.Pose(
         #print(keypoints)
         a = keypoints[10]['Y']
         b = keypoints[24]['Y']
-        print(a)
-        print(b)
+        #print(a)
+        #print(b)
         diff = abs(b - a)
-        print(diff)
-        terminate = timeit.default_timer()
-        FPS = int(1./(terminate - start))
-        print("FPS = " + str(FPS))
+        #print(diff)
         if diff < 0.1 :
-            print("넘어진듯")
+          cnt += 1
+          print(f'{cnt}번 쓰러짐 감지!, 넘어진듯')
 
+    # Frame rate
+    cTime = time.time()
+    fps = 1 / (cTime - pTime)
+    pTime = cTime
+    #print(fps)
+    cv2.putText(image, f'FPS: {int(fps)}', (40, 50), cv2.FONT_HERSHEY_COMPLEX,
+                1, (255, 0, 0), 3) 
 
     # Draw the pose annotation on the image.
     image.flags.writeable = True
@@ -101,9 +110,8 @@ with mp_pose.Pose(
         mp_pose.POSE_CONNECTIONS,
         landmark_drawing_spec=mp_drawing_styles.get_default_pose_landmarks_style())
 
-
     # Flip the image horizontally for a selfie-view display.
-    cv2.imshow('MediaPipe Pose', cv2.flip(image, 1))
+    cv2.imshow('MediaPipe Pose', image) #cv2.flip(image, 1)
     if cv2.waitKey(5) & 0xFF == 27:
       break
 cap.release()
